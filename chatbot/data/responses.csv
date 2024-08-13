@@ -1,0 +1,5 @@
+topic,file_names,text_if_error
+saluti,"startmsg","Ciao, sono ARI! Come posso aiutarti?"
+chiacchiera,"chiacchiera1;chiacchiera2;chiacchiera3","Sono un robot che serve ad aiutarti, le mie emozioni sono dettate dal conseguimento del mio scopo"
+tecnico,"tecnico1;tecnico2;tecnico3","Se hai bisogno di aiuto tecnico, ti consiglio di rivolgerti all'ufficio tecnico. Altrimenti ti posso portare in segreteria"
+addio,"addio","Autodistruzione fra 3... 2.. 1... Scherzo! A presto!"
