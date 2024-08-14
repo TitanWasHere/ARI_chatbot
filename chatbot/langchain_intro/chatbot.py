@@ -1,20 +1,32 @@
 import dotenv
 import os
-import openai
+from langchain_openai import AzureChatOpenAI
+from langchain_core.messages import HumanMessage, SystemMessage
 
 dotenv.load_dotenv()
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
-openai.api_type = "azure"
-openai.azure_endpoint = os.getenv("OPENAI_KEY_ENDPOINT")
-openai.api_version = "2024-02-01"
-deployment_name = os.getenv("DEPLOYMENT_NAME_GPT4o")
 # deployment_name = os.getenv("DEPLOYMENT_NAME_GPT4-32k")
 # deployment_name = os.getenv("DEPLOYMENT_NAME_GPT35-TURBO")
+deployment_name = os.getenv("DEPLOYMENT_NAME_GPT4o")
 
-# print("Sending a test completion job")
-# start_phrase = [
-#     {"role": "user", "content": "Give me the sum of the first 3 prime numbers"}
+api_key = os.getenv("AZURE_OPENAI_API_KEY")
+azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+api_version = "2024-02-01"
+
+# Initialize the ChatOpenAI object for Azure
+chat = AzureChatOpenAI(
+    api_version = api_version,
+    azure_deployment = deployment_name,
+    azure_endpoint= azure_endpoint,
+    api_key= api_key
+)
+
+# messages = [
+#     (
+#         "system",
+#         "You are a helpful translator. Translate the user sentence to French.",
+#     ),
+#     ("human", "I love programming."),
 # ]
-# response = openai.chat.completions.create(model=deployment_name, messages=start_phrase)
-# print(response.choices[0].message.content)
+# chat.invoke(messages)
+
