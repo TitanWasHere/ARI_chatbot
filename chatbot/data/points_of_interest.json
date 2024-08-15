@@ -1,0 +1,42 @@
+{
+    "ari_16c_dockstation":{
+        "wav_name": "ari_16c_dockstation",
+        "spoken_name": "stazione di ricarica",
+        "keywords": ["dock", "ricarica", "stazione"] 
+    },
+    "exit_lab": {
+        "wav_name": "exit_lab",
+        "spoken_name": "uscita del laboratorio",
+        "keywords": ["uscita", "porta", "uscita del laboratorio", "porta del laboratorio"] 
+    },
+    "angolo_nord_ovest": {
+        "wav_name": "angolo_nord_ovest",
+        "spoken_name": "angolo nord ovest",
+        "keywords": ["angolo nord ovest", "nord ovest", "angolo"] 
+    },
+    "angolo_nord_est": {
+        "wav_name": "angolo_nord_est",
+        "spoken_name": "angolo nord est",
+        "keywords": ["angolo nord est", "nord est", "angolo"] 
+    },
+    "angolo_sud_ovest": {
+        "wav_name": "angolo_sud_ovest",
+        "spoken_name": "angolo sud ovest",
+        "keywords": ["angolo sud ovest", "sud ovest", "angolo"]
+    },
+    "angolo_sud_est": {
+        "wav_name": "angolo_sud_est",
+        "spoken_name": "angolo sud est",
+        "keywords": ["angolo sud est", "sud est", "angolo"]
+    },
+    "ponte_povo1": {
+        "wav_name": "ponte_povo1",
+        "spoken_name": "ponte povo 1",
+        "keywords": ["ponte povo 1", "ponte povo uno", "ponte di povo 1", "ponte di povo uno", "ponte"]
+    },
+    "ponte_povo2": {
+        "wav_name": "ponte_povo2",
+        "spoken_name": "ponte povo 2",
+        "keywords": ["ponte povo 2", "ponte povo due", "ponte di povo 2", "ponte di povo due", "ponte"]
+    }
+}

@@ -1,0 +1,18 @@
+{
+    "saluti": {
+        "fileName": ["startmsg"],
+        "text_if_error": "Ciao, sono ARI! Come posso aiutarti?"
+    },
+    "chiacchiera": {
+        "fileName": ["chiacchiera1", "chiacchiera2", "chiacchiera3"],
+        "text_if_error": "Sono un robot che serve ad aiutarti, le mie emozioni sono dettate dal conseguimento del mio scopo"
+    },
+    "tecnico": {
+        "fileName": ["tecnico1", "tecnico2", "tecnico3"],
+        "text_if_error": "Se hai bisogno di aiuto tecnico, ti consiglio di rivolgerti all'ufficio tecnico. Altrimenti ti posso portare in segreteria"
+    },
+    "addio": {
+        "fileName": ["addio"],
+        "text_if_error": "Autodistruzione fra 3... 2.. 1... Scherzo! A presto!"
+    }
+}

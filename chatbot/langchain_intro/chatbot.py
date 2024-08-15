@@ -9,6 +9,13 @@ from langchain.prompts import (
     ChatPromptTemplate
 )
 from langchain_core.output_parsers import StrOutputParser
+from langchain_community.vectorstores import Chroma
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain.schema.runnable import RunnablePassthrough
+
+ARI_CHROMA_PATH = "ari_chroma"
+
+
 dotenv.load_dotenv()
 
 # Definisci il template per la risposta
@@ -32,7 +39,7 @@ review_system_prompt = SystemMessagePromptTemplate(
 review_human_prompt = HumanMessagePromptTemplate(
     prompt=PromptTemplate(
         input_variables=["question"],
-        template=review_template_str,
+        template="{question}",
     )
 )
 
@@ -60,4 +67,27 @@ chat = AzureChatOpenAI(
 )
 
 output_parser = StrOutputParser() # Permette di analizzare solo la stringa di risposta
-review_chain = review_prompt_template | chat | output_parser
+#review_chain = review_prompt_template | chat | output_parser
+
+model_name = "sentence-transformers/all-mpnet-base-v2"
+model_kwargs = {'device': 'cpu'}
+encode_kwargs = {'normalize_embeddings': True}
+hf = HuggingFaceEmbeddings(
+    model_name=model_name,
+    model_kwargs=model_kwargs,
+    encode_kwargs=encode_kwargs
+)
+
+reviews_vector_db = Chroma(
+    persist_directory=ARI_CHROMA_PATH,
+    embedding_function=hf
+)
+
+reviews_retriever  = reviews_vector_db.as_retriever(k=10)
+
+review_chain = (
+    {"context": reviews_retriever, "question": RunnablePassthrough()}
+    | review_prompt_template
+    | chat
+    | StrOutputParser()
+)
