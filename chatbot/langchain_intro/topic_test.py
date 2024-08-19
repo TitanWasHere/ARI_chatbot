@@ -17,6 +17,8 @@ from langchain_community.document_loaders import JSONLoader
 import json
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.chains import RetrievalQA
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 DIRECTORY_PATH = "../data/"
 TOPICS_FILE = "topics.json"
@@ -64,11 +66,11 @@ docsearch = Chroma.from_documents(
     texts, embeddings
 )
 
-qa = RetrievalQA.from_chain_type(llm=chat, chain_type="stuff", retriever=docsearch.as_retriever())
+qa = RetrievalQA.from_chain_type(llm=chat, chain_type="stuff", retriever=docsearch.as_retriever(k=4))
 
 
-output = qa.invoke(f"Sapendo che i topic sono {' '.join(topic_list)}, a quale topic appartiene di più la frase 'Qual è il tuo compito?', inoltre mi dici a quali parole chiave è associata questa categoria? Rispondi solamente con 'categoria; keyword1, keyword2...' ")
+output = qa.invoke(f"Sapendo che i topic sono {' '.join(topic_list)}, a quale topic appartiene di più la frase 'Qual è il tuo compito?', inoltre mi dici a quali parole chiave è associata questa categoria? Rispondi solamente con 'categoria; keyword1, keyword2...', inoltre dimmi che ore sono ")
+
 output = output["result"]
 print(output) # Expected output: "topic; key1, key2..."
-#print(qa.invoke("Chi è George Washington?"))
 
