@@ -4,6 +4,7 @@ import os
 import dotenv
 import json
 import speech_recognition as sr
+from streamlit_webrtc import webrtc_streamer
 from langchain_openai import AzureChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.chains.combine_documents import create_stuff_documents_chain
@@ -117,39 +118,34 @@ def recognize_speech_from_mic():
             st.warning("Non ho capito cosa hai detto. Per favore riprova.")
             return ""
 
-# Layout per l'input di testo e il pulsante del microfono affiancati
-col1, col2 = st.columns([8, 1])
-with col1:
-    user_input = st.chat_input("What is up?")
+# Gestione dell'input vocale
+if st.button("🎙️"):
+    speech_text = recognize_speech_from_mic()
+    if speech_text:
+        st.session_state.messages.append({"role": "user", "content": speech_text})
+        with st.chat_message("user"):
+            st.markdown(speech_text)
 
-with col2:
-    if st.button("🎙️"):
-        speech_text = recognize_speech_from_mic()
-        if speech_text:
-            st.session_state.messages.append({"role": "user", "content": speech_text})
-            with st.chat_message("user"):
-                st.markdown(speech_text)
+        with st.chat_message("assistant"):
+            # Utilizzo di chain.invoke per ottenere la risposta
+            response = chain.invoke({
+                "input": f"Sapendo che i topic sono {' '.join(topic_list)}, a quale topic appartiene di più la frase '{speech_text}', inoltre mi dici a quali parole chiave è associata questa categoria? Rispondi solamente con 'categoria; keyword1, keyword2...'"
+            })
+            answer = response['answer']
 
-            with st.chat_message("assistant"):
-                # Utilizzo di chain.invoke per ottenere la risposta
-                response = chain.invoke({
-                    "input": f"Sapendo che i topic sono {' '.join(topic_list)}, a quale topic appartiene di più la frase '{speech_text}', inoltre mi dici a quali parole chiave è associata questa categoria? Rispondi solamente con 'categoria; keyword1, keyword2...'"
-                })
-                answer = response['answer']
-
-                st.markdown(answer)
-                st.session_state.messages.append({"role": "assistant", "content": answer})
+            st.markdown(answer)
+            st.session_state.messages.append({"role": "assistant", "content": answer})
 
 # Gestione dell'input dell'utente da tastiera
-if user_input:
-    st.session_state.messages.append({"role": "user", "content": user_input})
+if prompt := st.chat_input("What is up?"):
+    st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
-        st.markdown(user_input)
+        st.markdown(prompt)
 
     with st.chat_message("assistant"):
         # Utilizzo di chain.invoke per ottenere la risposta
         response = chain.invoke({
-            "input": f"Sapendo che i topic sono {' '.join(topic_list)}, a quale topic appartiene di più la frase '{user_input}', inoltre mi dici a quali parole chiave è associata questa categoria? Rispondi solamente con 'categoria; keyword1, keyword2...'"
+            "input": f"Sapendo che i topic sono {' '.join(topic_list)}, a quale topic appartiene di più la frase '{prompt}', inoltre mi dici a quali parole chiave è associata questa categoria? Rispondi solamente con 'categoria; keyword1, keyword2...'"
         })
         answer = response['answer']
 
