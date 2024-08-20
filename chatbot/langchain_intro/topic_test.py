@@ -68,9 +68,16 @@ docsearch = Chroma.from_documents(
 
 qa = RetrievalQA.from_chain_type(llm=chat, chain_type="stuff", retriever=docsearch.as_retriever(k=4))
 
+# Let the user add a phrase from the input
+# Also calculate the time it takes to run the code
+from datetime import datetime
+while True:
+    phrase = input("Inserisci una frase: ")
+    start_time = datetime.now()
 
-output = qa.invoke(f"Sapendo che i topic sono {' '.join(topic_list)}, a quale topic appartiene di più la frase 'Qual è il tuo compito?', inoltre mi dici a quali parole chiave è associata questa categoria? Rispondi solamente con 'categoria; keyword1, keyword2...', inoltre dimmi che ore sono ")
+    output = qa.invoke(f"Sapendo che i topic sono {' '.join(topic_list)}, a quale topic appartiene di più la frase '{phrase}', inoltre mi dici a quali parole chiave è associata questa categoria? Rispondi solamente con 'topic; keyword1, keyword2...'")
 
-output = output["result"]
-print(output) # Expected output: "topic; key1, key2..."
+    output = output["result"]
+    print(output) # Expected output: "topic; key1, key2..."
+    print(f"Time taken: {datetime.now() - start_time}")
 
