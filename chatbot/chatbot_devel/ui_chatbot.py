@@ -4,7 +4,6 @@ import os
 import dotenv
 import json
 import speech_recognition as sr
-from streamlit_webrtc import webrtc_streamer
 from langchain_openai import AzureChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.chains.combine_documents import create_stuff_documents_chain
@@ -18,7 +17,7 @@ from langchain.chains import create_retrieval_chain
 dotenv.load_dotenv()
 
 # Inizializzazione Streamlit
-st.title("ChatGPT-like clone")
+st.title("Chat with ARI 💬")
 
 # Inizializzazione dell'API di Azure OpenAI
 deployment_name = os.getenv("DEPLOYMENT_NAME_GPT4o")

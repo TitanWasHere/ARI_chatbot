@@ -1,7 +1,22 @@
 {
-    "saluti": ["ciao", "salve", "buongiorno"],
-    "chiacchiera" : ["come va", "come stai" , "cosa fai" , "scopo" , "tutto bene" , "obiettivo" ],
-    "tecnico": ["non funziona", "errore", "aiuto" , "problema", "laboratorio"],
-    "addio" : [ "buona giornata" , "addio" ],
-    "goto" : [ "vai", "portami", "andare"]
+    "saluti": {
+        "description": "Saluti e inizio conversazione",
+        "keywords":["ciao", "salve", "buongiorno"]
+    },
+    "chiacchiera" : {
+        "description": "Conversazioni generiche",
+        "keywords": ["come va", "come stai" , "cosa fai" , "scopo" , "tutto bene" , "obiettivo" ]
+    },
+    "tecnico": {
+        "description": "Conversazioni tecniche, che comprendono aiuto e supporto nell'ambito lavorativo",
+        "keywords": ["non funziona", "errore", "aiuto" , "problema", "laboratorio"]
+    },
+    "addio" :{
+        "description": "Fine conversazione",
+        "keywords": [ "buona giornata" , "addio" ]
+    },
+    "goto" : {
+        "description": "Indicazioni per raggiungere un punto di interesse e andare in direzione di tale",
+        "keywords": [ "vai", "portami", "andare"]
+    }
 }
