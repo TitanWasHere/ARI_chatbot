@@ -37,23 +37,41 @@ if "openai_model" not in st.session_state:
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Caricamento del file JSON
+# Caricamento dei file JSON
 DIRECTORY_PATH = "../data/"
 TOPICS_FILE = "topics.json"
+POI_FILE = "points_of_interest.json"
+
+# Caricamento dei file JSON
 topics = {}
 topic_list = []
+poi = {}
 
 with open(DIRECTORY_PATH + TOPICS_FILE) as f:
     topics = json.load(f)
-    topic_list = topics.keys()
 
-loader = JSONLoader(
+
+with open(DIRECTORY_PATH + POI_FILE) as f:
+    poi = json.load(f)
+
+
+# Unire i dati dei due file in un'unica lista di documenti
+loader_topics = JSONLoader(
     file_path=DIRECTORY_PATH + TOPICS_FILE,
     text_content=False,
-    jq_schema=".[]"
+    jq_schema="."
 )
 
-data = loader.load()
+loader_poi = JSONLoader(
+    file_path=DIRECTORY_PATH + POI_FILE,
+    text_content=False,
+    jq_schema="."
+)
+
+data_topics = loader_topics.load()
+data_poi = loader_poi.load()
+data = data_topics + data_poi
+
 splitter = RecursiveCharacterTextSplitter(chunk_size=200, chunk_overlap=20)
 texts = splitter.split_documents(data)
 
@@ -64,7 +82,7 @@ def create_vector(docs):
     vectorStore = FAISS.from_documents(docs, embedding=embedding)
     return vectorStore
 
-def create_chain(vectorStore):
+def create_chain(vectorStore, topics, poi):
     model = AzureChatOpenAI(
         api_version=api_version,
         azure_deployment=deployment_name,
@@ -72,12 +90,21 @@ def create_chain(vectorStore):
         api_key=api_key
     )
 
+    string = f"I valori di {topics} sono il nome della categoria con associata la descrizione e le parole chiave associate a quella categoria.\n" \
+             f"I valori di {poi} sono i punti di interesse in cui vogliamo andare, i valori sono il nome del punto di ineteresse con associate le parole chiave di tale, il suo nome del file .wav associato e come viene chiamato.\n" \
+             f"Quando l'utente ti fa una domanda, capisci a che topic si fa riferimento, se non è nessun topic allora rispondi generalmente e rispondi con il nome del topic.\n" \
+             f"Se la categoria è \"goto\" allora dimmi il punto di interesse più simile associato altrimenti non dire nulla, per farlo dimmi il nome del punto di interesse dalla lista."
+
     # Definizione del template del prompt
-    prompt = ChatPromptTemplate.from_template("""
-    Rispondi alla seguente domanda dell'utente (sapendo che il documento è formato da coppie (topic, lista di keywords associate al topic)):
+    prompt = ChatPromptTemplate.from_template(#string + """
+        """
+    I valori di topics sono il nome della categoria con associata la descrizione e le parole chiave associate a quella categoria."  I valori di poi sono i punti di interesse in cui vogliamo andare, i valori sono il nome del punto di ineteresse con associate le parole chiave di tale, il suo nome del file .wav associato e come viene chiamato."
+    Quando l'utente ti fa una domanda, capisci a che topic si fa riferimento, se non è nessun topic allora rispondi generalmente e rispondi con il nome del topic.\n"   Se la categoria è \"goto\" allora dimmi il punto di interesse più simile associato altrimenti non dire nulla, per farlo dimmi il nome del punto di interesse dalla lista."
+
+
     Contesto: {context} 
     Domanda: {input}                                          
-    """)
+    """, topic=topics, poi=poi)
 
     chain = create_stuff_documents_chain(
         llm=model, 
@@ -93,7 +120,7 @@ def create_chain(vectorStore):
     return retrieval_chain
 
 vectorStore = create_vector(texts)
-chain = create_chain(vectorStore)
+chain = create_chain(vectorStore, topics, poi)
 
 # Visualizzazione dei messaggi in Streamlit
 for message in st.session_state.messages:
@@ -128,7 +155,7 @@ if st.button("🎙️"):
         with st.chat_message("assistant"):
             # Utilizzo di chain.invoke per ottenere la risposta
             response = chain.invoke({
-                "input": f"Sapendo che i topic sono {' '.join(topic_list)}, a quale topic appartiene di più la frase '{speech_text}', inoltre mi dici a quali parole chiave è associata questa categoria? Rispondi solamente con 'categoria; keyword1, keyword2...'"
+                "input": f"{speech_text}"
             })
             answer = response['answer']
 
@@ -144,7 +171,7 @@ if prompt := st.chat_input("What is up?"):
     with st.chat_message("assistant"):
         # Utilizzo di chain.invoke per ottenere la risposta
         response = chain.invoke({
-            "input": f"Sapendo che i topic sono {' '.join(topic_list)}, a quale topic appartiene di più la frase '{prompt}', inoltre mi dici a quali parole chiave è associata questa categoria? Rispondi solamente con 'categoria; keyword1, keyword2...'"
+            "input": f"{prompt}"
         })
         answer = response['answer']
 
