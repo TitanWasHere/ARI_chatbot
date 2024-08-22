@@ -12,6 +12,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores.faiss import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.chains import create_retrieval_chain
+from langchain.chains import create_history_aware_retriever
 
 # Caricamento delle variabili d'ambiente
 dotenv.load_dotenv()
@@ -90,25 +91,26 @@ def create_chain(vectorStore, topics, poi):
         api_key=api_key
     )
 
-    string = f"I valori di {topics} sono il nome della categoria con associata la descrizione e le parole chiave associate a quella categoria.\n" \
-             f"I valori di {poi} sono i punti di interesse in cui vogliamo andare, i valori sono il nome del punto di ineteresse con associate le parole chiave di tale, il suo nome del file .wav associato e come viene chiamato.\n" \
-             f"Quando l'utente ti fa una domanda, capisci a che topic si fa riferimento, se non è nessun topic allora rispondi generalmente e rispondi con il nome del topic.\n" \
-             f"Se la categoria è \"goto\" allora dimmi il punto di interesse più simile associato altrimenti non dire nulla, per farlo dimmi il nome del punto di interesse dalla lista."
-
     # Definizione del template del prompt
-    prompt = ChatPromptTemplate.from_template(#string + """
-        """
-    I valori di topics sono il nome della categoria con associata la descrizione e le parole chiave associate a quella categoria."  I valori di poi sono i punti di interesse in cui vogliamo andare, i valori sono il nome del punto di ineteresse con associate le parole chiave di tale, il suo nome del file .wav associato e come viene chiamato."
-    Quando l'utente ti fa una domanda, capisci a che topic si fa riferimento, se non è nessun topic allora rispondi generalmente e rispondi con il nome del topic.\n"   Se la categoria è \"goto\" allora dimmi il punto di interesse più simile associato altrimenti non dire nulla, per farlo dimmi il nome del punto di interesse dalla lista."
-
+    prompt = ChatPromptTemplate.from_template(
+    """
+    I valori di {topics} sono il nome della categoria con associata la descrizione e le parole chiave associate a quella categoria. 
+    I valori di {poi} sono i punti di interesse in cui vogliamo andare, 
+    i valori sono il nome del punto di ineteresse con associate le parole chiave di tale, il suo nome del file .wav associato e come viene chiamato. 
+    Quando l'utente ti fa una domanda, capisci a che topic si fa riferimento, se non è nessun topic allora rispondi generalmente e rispondi con il nome del topic. 
+    Se la categoria è \"goto\" allora dimmi il punto di interesse più simile associato altrimenti non dire nulla, per farlo dimmi il nome del punto di interesse dalla lista,
+    inoltre se non è esattamente chiaro a quale punto di interesse vuole andare, chiedi una conferma fra quelli disponibili usando il loro nome parlato
+    Se il punto di interesse viene confermato allora rispondi con "vado a 'nome punto di interesse'.
 
     Contesto: {context} 
     Domanda: {input}                                          
-    """, topic=topics, poi=poi)
+    """)
+    
+    #prompt.format(string=string)
 
     chain = create_stuff_documents_chain(
         llm=model, 
-        prompt=prompt
+        prompt=prompt,
     )
 
     retriever = vectorStore.as_retriever(k=10)
@@ -120,7 +122,9 @@ def create_chain(vectorStore, topics, poi):
     return retrieval_chain
 
 vectorStore = create_vector(texts)
-chain = create_chain(vectorStore, topics, poi)
+topics_str = json.dumps(topics)
+poi_str = json.dumps(poi)
+chain = create_chain(vectorStore, topics_str, poi_str)
 
 # Visualizzazione dei messaggi in Streamlit
 for message in st.session_state.messages:
@@ -144,6 +148,23 @@ def recognize_speech_from_mic():
             st.warning("Non ho capito cosa hai detto. Per favore riprova.")
             return ""
 
+# Inizializzazione dei messaggi nella sessione di Streamlit
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# Funzione per costruire il contesto della conversazione
+def build_context(messages):
+    context = ""
+    for msg in messages:
+        context += f"{msg['role']}: {msg['content']}\n"
+    return context
+
+# Visualizzazione dei messaggi in Streamlit
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+
 # Gestione dell'input vocale
 if st.button("🎙️"):
     speech_text = recognize_speech_from_mic()
@@ -152,10 +173,14 @@ if st.button("🎙️"):
         with st.chat_message("user"):
             st.markdown(speech_text)
 
+        context = build_context(st.session_state.messages)
+
         with st.chat_message("assistant"):
             # Utilizzo di chain.invoke per ottenere la risposta
             response = chain.invoke({
-                "input": f"{speech_text}"
+                "input": f"{speech_text}",
+                "poi": poi_str,
+                "topics": topics_str
             })
             answer = response['answer']
 
@@ -168,10 +193,15 @@ if prompt := st.chat_input("What is up?"):
     with st.chat_message("user"):
         st.markdown(prompt)
 
+    context = build_context(st.session_state.messages)
+
     with st.chat_message("assistant"):
         # Utilizzo di chain.invoke per ottenere la risposta
         response = chain.invoke({
-            "input": f"{prompt}"
+            "input": f"{prompt}",
+            "poi": poi_str,
+            "topics": topics_str
+            #string: string
         })
         answer = response['answer']
 
