@@ -23,6 +23,7 @@ dotenv.load_dotenv()
 # Inizializzazione Streamlit
 st.title("Chat with ARI 💬")
 
+
 # Inizializzazione dell'API di Azure OpenAI
 deployment_name = os.getenv("DEPLOYMENT_NAME_GPT4o")
 api_key = os.getenv("AZURE_OPENAI_API_KEY")
@@ -229,7 +230,7 @@ if st.button("🎙️"):
                     "topics": topics_str
                 },
                 config={
-                    "configurable": {"session_id": "1234"}
+                    "configurable": {"session_id": "ARI1"}
                 }
             )
             answer = response['answer']
@@ -260,7 +261,7 @@ if prompt := st.chat_input("What is up?"):
                 "topics": topics_str
             },
             config={
-                "configurable": {"session_id": "1234"}
+                "configurable": {"session_id": "ARI1"}
             }
         )
         answer = response['answer']
