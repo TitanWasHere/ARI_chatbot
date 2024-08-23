@@ -1,4 +1,3 @@
-from openai import AzureOpenAI
 import streamlit as st
 import os
 import dotenv
@@ -7,7 +6,7 @@ import speech_recognition as sr
 from langchain_openai import AzureChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain_community.document_loaders import JSONLoader
+from langchain_community.document_loaders import JSONLoader, DirectoryLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores.faiss import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -153,10 +152,11 @@ loader_poi = JSONLoader(
 
 data_topics = loader_topics.load()
 data_poi = loader_poi.load()
-data = data_topics + data_poi
+data = data_topics 
 
 splitter = RecursiveCharacterTextSplitter(chunk_size=200, chunk_overlap=20)
 texts = splitter.split_documents(data)
+texts.extend(data_poi)
 
 vectorStore = create_vector(texts)
 topics_str = json.dumps(topics)
@@ -249,4 +249,4 @@ if prompt := st.chat_input("What is up?"):
         add_message_to_history(SESSION_ID, "assistant", answer)  # Aggiungi alla storia
         st.markdown(answer)
         st.session_state.messages.append({"role": "assistant", "content": answer})
-        #print(st.session_state.messages)
+        print(response["context"])

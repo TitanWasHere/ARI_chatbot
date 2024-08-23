@@ -1,15 +1,30 @@
 import streamlit as st
-from langchain_openai import AzureChatOpenAI
-import dotenv
 import os
+import dotenv
+import json
+import speech_recognition as sr
+from langchain_openai import AzureChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain_community.document_loaders import JSONLoader, DirectoryLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.vectorstores.faiss import FAISS
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain.chains import create_retrieval_chain, create_history_aware_retriever
+from langchain_core.runnables.history import RunnableWithMessageHistory
 
-SESSION_ID = "ARI1"
-
-# Caricamento delle variabili d'ambiente
 dotenv.load_dotenv()
 
-# Inizializzazione Streamlit
-st.title("Chat with ARI 💬")
+topics = []
+points_of_interest = []
+
+with open("../data/topics.json") as f:
+    chat_prompt = json.load(f)
+    topics = chat_prompt.keys()
+        
+with open("../data/points_of_interest.json") as f:
+    chat_prompt = json.load(f)
+    points_of_interest = chat_prompt.keys()
 
 # Inizializzazione dell'API di Azure OpenAI
 deployment_name = os.getenv("DEPLOYMENT_NAME_GPT4o")
@@ -17,47 +32,83 @@ api_key = os.getenv("AZURE_OPENAI_API_KEY")
 azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
 api_version = "2024-02-01"
 
-client = AzureChatOpenAI(
-    api_version=api_version,
-    azure_deployment=deployment_name,
-    azure_endpoint=azure_endpoint,
-    api_key=api_key,
-)
+def get_documents(url):
+
+    loader = JSONLoader(
+        file_path = url + "topics.json",
+        jq_schema=".",
+        text_content=False
+    )
+    docs1 = loader.load()
+
+    loader2 = JSONLoader(
+        file_path = url + "points_of_interest.json",
+        jq_schema=".",
+        text_content=False
+    )
+    docs2 = loader2.load()
+
+    docs = docs1 + docs2
+
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=400,
+        chunk_overlap=20
+    )
+
+    splitDocs = splitter.split_documents(docs)
+    return splitDocs
+
+def create_db(docs):
+    embedding = HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-mpnet-base-v2"
+    )
+    vectorStore = FAISS.from_documents(docs, embedding=embedding)
+    return vectorStore
+
+def create_chain(vectorStore):
+    model = AzureChatOpenAI(
+        api_version=api_version,
+        azure_deployment=deployment_name,
+        azure_endpoint=azure_endpoint,
+        api_key=api_key
+    )
+
+    
+    
+
+    prompt = ChatPromptTemplate.from_template("""
+    Answer the user question knowing that the topics are: {topics} and the points of interest are: {points_of_interest}
+                                              
+    Context: {context}
+    Question: {input}
+    """)
+    
+    chain = create_stuff_documents_chain(
+        llm=model,
+        prompt=prompt
+    )
+
+    retriever = vectorStore.as_retriever(search_kwargs={"k": 3})
+
+    retriever_chain = create_retrieval_chain(
+        retriever,
+        chain
+    )
+
+    return retriever_chain
+
+def process_chat()_
+    response = chain.invoke({
+        "input": "What are my topics?",
+        "topics": topics,
+        "points_of_interest": points_of_interest
+    })
+
+    return(response["answer"])
+
+if __name__ == "__main__":
+    docs = get_documents("../data/")
+    vectorStore = create_db(docs)
+    chain = create_chain(vectorStore)
 
 
-# Set a default model
-if "openai_model" not in st.session_state:
-    st.session_state["openai_model"] = "gpt-3.5-turbo"
-
-# Initialize chat history
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-# Display chat messages from history on app rerun
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-
-# Gestione dell'input dell'utente da tastiera
-if prompt := st.chat_input("What is up?"):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
-
-    context = build_context(st.session_state.messages)
-
-    with st.chat_message("assistant"):
-        response = chain.invoke(
-            {
-                "input": f"{prompt}",
-                "poi": poi_str,
-                "topics": topics_str,
-                "history": get_session_history(SESSION_ID).messages  # Passa la cronologia qui
-            },
-            config={
-                "configurable": {"session_id": SESSION_ID}
-            }
-        )
-        answer = response['answer']
-
-        st.session_state.messages.append({"role": "assistant", "content": answer})
