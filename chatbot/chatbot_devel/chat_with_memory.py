@@ -12,6 +12,9 @@ from langchain_community.vectorstores.faiss import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.chains import create_retrieval_chain, create_history_aware_retriever
 from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.prompts import MessagesPlaceholder
+from langchain.chains.history_aware_retriever import create_history_aware_retriever
 
 dotenv.load_dotenv()
 
@@ -75,13 +78,13 @@ def create_chain(vectorStore):
 
     
     
+    #    Answer the user question knowing that the topics are: {topics} and the points of interest are: {points_of_interest}
 
-    prompt = ChatPromptTemplate.from_template("""
-    Answer the user question knowing that the topics are: {topics} and the points of interest are: {points_of_interest}
-                                              
-    Context: {context}
-    Question: {input}
-    """)
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "Answer the user question knowing that the topics are: {topics} and the points of interest are: {points_of_interest} based on the context: {context}"),
+        MessagesPlaceholder(variable_name="chat_history"),
+        ("human", "{input}")
+    ])
     
     chain = create_stuff_documents_chain(
         llm=model,
@@ -90,17 +93,29 @@ def create_chain(vectorStore):
 
     retriever = vectorStore.as_retriever(search_kwargs={"k": 3})
 
+    retriever_prompt = ChatPromptTemplate.from_messages([
+        MessagesPlaceholder(variable_name="chat_history"),
+        ("human", "{input}"),
+        ("human", "given the above conversation, generate a search query to look up in order to get information relevant to the conversation")
+    ])
+    history_aware_retriever = create_history_aware_retriever(
+        llm=model,
+        retriever=retriever,
+        prompt=retriever_prompt
+    )
+
     retriever_chain = create_retrieval_chain(
-        retriever,
+        history_aware_retriever,
         chain
     )
 
     return retriever_chain
 
-def process_chat()_
+def process_chat(chain, question, chat_history):
     response = chain.invoke({
-        "input": "What are my topics?",
+        "input": question,
         "topics": topics,
+        "chat_history": chat_history,
         "points_of_interest": points_of_interest
     })
 
@@ -110,5 +125,15 @@ if __name__ == "__main__":
     docs = get_documents("../data/")
     vectorStore = create_db(docs)
     chain = create_chain(vectorStore)
+    
+    chat_history = [
+    ]
 
-
+    while True:
+        user_input = input("Tu: ")
+        if user_input.lower() == "exit":
+            break
+        resp = process_chat(chain, user_input, chat_history)
+        chat_history.append(HumanMessage(content=user_input))
+        chat_history.append(AIMessage(content=resp))
+        print("AI;", resp)
