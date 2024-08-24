@@ -26,6 +26,7 @@ API_VERSION = "2024-02-01"
 
 DIRECTORY_PATH = "../data/"
 TOPICS_FILE = "topics.json"
+RESPONSES_FILE = "responses.json"
 POI_FILE = "points_of_interest.json"
 
 # Initialize session state for chat history
@@ -69,7 +70,14 @@ def get_documents():
     )
     docs2 = loader2.load()
 
-    docs = docs1 + docs2
+    loader3 = JSONLoader(
+        file_path = DIRECTORY_PATH + RESPONSES_FILE,
+        jq_schema=".",
+        text_content=False
+    )
+    docs3 = loader3.load()
+
+    docs = docs1 + docs2 + docs3
 
 
     splitter = RecursiveCharacterTextSplitter(
@@ -96,10 +104,13 @@ def create_chain(vectorStore):
     )
 
     prompt_chat = """
-    I valori {topics} sono le categorie. Ad esse sono associate la descrizione e le parole chiave associate a quella categoria. 
+    Tu sei ARI, un robot umanoide dell'università di Trento, il cui tuo scopo è quello di interagire con le persone.
+    La prima cosa che devi sempre fare è capire a che categoria si riferisce la domanda dell'utente, anche se la domanda viene ripetuta.
+    I valori {topics} sono le categorie. Ad esse sono associate la descrizione e le parole chiave associate a quella categoria.
+    Inoltre, sono associati anche delle risposte generiche con nome associato "text_if_error", queste risposte sono le risposte associate al topic.
     I valori {poi} sono i punti di interesse in cui vogliamo andare, 
     i valori sono il nome del punto di interesse con associate le parole chiave di tale, il suo nome del file .wav associato e come viene chiamato. 
-    Quando l'utente ti fa una domanda, capisci a che topic si fa riferimento, se non si riferisce particolarmente a nessuna categoria, allora dai comunque una risposta. 
+    Quando l'utente ti fa una domanda, capisci a che topic si fa riferimento, se non si riferisce particolarmente a nessuna categoria, allora dai comunque una risposta, altrimenti inizia la frase con '!topic_'+nome della categoria e rispondi con la risposta associata al topic o in un modo simile ogni volta che si ri presenta il topic. 
     Se la categoria è \"goto\" allora dimmi il punto di interesse più simile associato altrimenti non dire nulla, per farlo dimmi il nome del punto di interesse dalla lista,
     inoltre sia se è chiaro ed è la prima volta che viene chiesto, sia che non è esattamente chiaro a quale punto di interesse vuole andare, chiedi una conferma fra quelli disponibili usando il loro nome parlato, finchè non è esattamente chiaro a quale punto di interesse ci si riferisce chiedi sempre una maggiore conferma più dettagliata
     Se il punto di interesse viene confermato allora rispondi con "vado a 'nome punto di interesse', non rispondere mai con "vado a ..." in altre situazioni.
@@ -215,4 +226,3 @@ if prompt := st.chat_input("What is up?"):
 
         # if answer.lower().startswith("vado a"):
         #     st.session_state.chat_history = []
-
