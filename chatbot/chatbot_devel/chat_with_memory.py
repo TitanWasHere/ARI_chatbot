@@ -137,3 +137,4 @@ if __name__ == "__main__":
         chat_history.append(HumanMessage(content=user_input))
         chat_history.append(AIMessage(content=resp))
         print("AI;", resp)
+        print(chat_history)
