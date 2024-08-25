@@ -47,6 +47,7 @@ class Chatbot:
         # Rospy subscriber and publisher (topic)
         self.sub = rospy.Subscriber("/process_gpt", String, self.chatbot_msgs)
         self.pub = rospy.Publisher("/chatbot_response", String, queue_size=10)
+        self.pub_wav = rospy.Publisher("/wav_creator", String, queue_size=10)
 
 
 
@@ -62,6 +63,7 @@ class Chatbot:
         self.chat_history.append(HumanMessage(content=question))
         self.chat_history.append(AIMessage(content=self.resp))
 
+        self.pub_wav("chatbot_response;"+self.resp)
         self.pub.publish(self.resp)
 
 

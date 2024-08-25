@@ -18,7 +18,7 @@ class create_wavs:
 
         # Create a service server
         # String: fileName; txt
-        self.sub = rospy.Subscriber("wav_creator", String, self.callback)
+        self.sub = rospy.Subscriber("/wav_creator", String, self.callback)
 
         rospy.spin()
 
@@ -31,10 +31,13 @@ class create_wavs:
         mp3name = "../wavs/" + wavs_name_dir + "/" + name + ".mp3"
         wavname = "../wavs/" + wavs_name_dir + "/" + name + ".wav"
         tts.save(mp3name)
+        tts.save(wavname)
 
         subprocess.call(['ffmpeg', '-i', mp3name, wavname])
 
         os.system("aplay " + wavname)
+        os.remove(mp3name)
+        os.remove(wavname)
             
         
 
