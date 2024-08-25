@@ -226,3 +226,10 @@ if prompt := st.chat_input("What is up?"):
 
         # if answer.lower().startswith("vado a"):
         #     st.session_state.chat_history = []
+
+# # Make a button which redirect the page to the URL: http://localhost:8080/
+# if st.button("Redirect"):
+#     my_js = ("window.location.href = 'http://localhost:8080/'")
+#     from streamlit.components.v1 import html
+#     my_html = f"<script>{my_js}</script>"
+#     html(my_html)

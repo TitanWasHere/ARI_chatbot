@@ -9,3 +9,4 @@ openai==1.7.2
 opentelemetry-api==1.22.0
 pydantic==2.5.1
 uvicorn==0.25.0
+dotenv==1.0.1
