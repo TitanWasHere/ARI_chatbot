@@ -46,10 +46,14 @@ class Chatbot:
         self.resp = ""
         # Rospy subscriber and publisher (topic)
         self.sub = rospy.Subscriber("/process_gpt", String, self.chatbot_msgs)
-        self.pub = rospy.Publisher("/chatbot_response", String, queue_size=10)
+        self.pub_chat = rospy.Publisher("/chatbot_response", String, queue_size=10)
         self.pub_wav = rospy.Publisher("/wav_creator", String, queue_size=10)
+        self.sub_clear = rospy.Subscriber("/clear_chat", String, self.clear_chat)
 
-
+    def clear_chat(self, req):
+        if req.data == "clear":
+            self.chat_history = []
+        
 
     def chatbot_msgs(self, req):
         question = req.data
@@ -63,7 +67,13 @@ class Chatbot:
         self.chat_history.append(HumanMessage(content=question))
         self.chat_history.append(AIMessage(content=self.resp))
 
-        self.pub_wav("chatbot_response;"+self.resp)
+        
+
+        if self.resp.startswith("!"):
+            _, message = self.resp.split(" ", 1)
+            self.pub_wav(message)
+
+
         self.pub.publish(self.resp)
 
 
