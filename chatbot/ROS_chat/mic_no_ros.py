@@ -1,15 +1,12 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3.10
 
-import rospy
 import speech_recognition as sr
-from std_msgs.msg import String
+import sys
 
 class MicrophoneListener:
     def __init__(self):
-        self.pub = rospy.Publisher("/text_input", String, queue_size=10)
         self.r = sr.Recognizer()
         self.mic = sr.Microphone()
-        self.sub = rospy.Subscriber("/microphone", String, self.listen)
 
     def listen(self):
         with self.mic as source:
@@ -20,17 +17,26 @@ class MicrophoneListener:
             try:
                 question = self.r.recognize_google(audio)
                 print("You said: " + question)
-                self.pub.publish(question)
+                # Send recognized text to stdout
+                print(question)
+                sys.stdout.flush()
             except sr.UnknownValueError:
                 print("Could not understand audio")
+                sys.stdout.flush()
             except sr.RequestError as e:
                 print("Could not request results; {0}".format(e))
-            self.listen()
+                sys.stdout.flush()
+
+def main():
+    listener = MicrophoneListener()
+    while True:
+        try:
+            # Continuously listen for audio input
+            listener.listen()
+        except KeyboardInterrupt:
+            # Handle script termination with Ctrl+C
+            print("Terminating...")
+            break
 
 if __name__ == "__main__":
-    try:
-        rospy.init_node("microphone_listener", disable_signals=True)
-        mic = MicrophoneListener()
-        rospy.spin()
-    except rospy.ROSInterruptException:
-        pass
+    main()
