@@ -1,43 +1,74 @@
 import subprocess
+import rospy
+from std_msgs.msg import String
+import os
+import signal
+
+class Switch:
+    
+    def __init__(self):
+        # Initialize ROS subscribers and publishers
+        self.sub_message = rospy.Subscriber("/process_gpt", String, self.gpt_callback)
+        
+        # Start the subprocess
+        self.start_process()
+
+    def start_process(self):
+        # Start the subprocess
+        self.process = subprocess.Popen(
+            ['python3', 'chat_process.py'],  # Use 'python' for Python 2.7
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        
+    def gpt_callback(self, msg):
+        message = msg.data
+        rospy.loginfo("Ricevuto messaggio: %s", message)
+
+        # Check if the subprocess is still alive
+        if self.process.poll() is not None:
+            rospy.logwarn("Subprocess is not running. Restarting...")
+            self.start_process()
+
+        # Send message to subprocess
+        try:
+            self.process.stdin.write(message + '\n')
+            self.process.stdin.flush()
+        except IOError as e:
+            rospy.logerr("IOError while writing to subprocess stdin: %s", e)
+            self.restart_process()  # Restart the process if there's an error
+
+        # Read response from subprocess
+        try:
+            response = self.process.stdout.readline()
+            if response:
+                rospy.loginfo("Risposta: %s", response.strip())
+            else:
+                rospy.logwarn("Nessuna risposta ricevuta.")
+        except IOError as e:
+            rospy.logerr("IOError while reading from subprocess stdout: %s", e)
+            self.restart_process()  # Restart the process if there's an error
+
+    def restart_process(self):
+        # Terminate the existing process and start a new one
+        if self.process:
+            try:
+                self.process.terminate()
+                self.process.wait()
+            except Exception as e:
+                rospy.logerr("Exception while terminating process: %s", e)
+        
+        self.start_process()
 
 def main():
-    # Avvia il secondo script usando Python 3
-    proc = subprocess.Popen(
-        ['python3', 'chat_process.py'],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
-    )
-
+    # Initialize the ROS node
     try:
-        # Leggi il messaggio di "alive" dallo script2
-        alive_message = proc.stdout.readline().strip()
-        if alive_message == "alive":
-            print("Ricevuto messaggio: {}".format(alive_message))
-
-        # Esegui il ciclo di invio/ricezione messaggi
-        for i in range(5):
-            messaggio = "Ciao, messaggio numero " + str(i+1) + "\n" 
-            print("Invio: {}".format(messaggio.strip()))
-            proc.stdin.write(messaggio)
-            proc.stdin.flush()
-
-            # Attendi la risposta
-            risposta = proc.stdout.readline().strip()
-            if risposta:
-                print("Risposta: {}".format(risposta))
-            else:
-                print("Nessuna risposta ricevuta.")
-                break
-
-    except IOError as e:
-        print("Errore durante la comunicazione: {}".format(e))
-
-    finally:
-        proc.stdin.close()
-        proc.stdout.close()
-        proc.stderr.close()
-        proc.wait()
+        rospy.init_node("switch", disable_signals=True)
+        switch = Switch()
+        rospy.spin()
+    except rospy.ROSInterruptException:
+        pass
 
 if __name__ == "__main__":
     main()

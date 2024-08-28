@@ -1,9 +1,6 @@
 import sys
 
 def main():
-    # Stampa il messaggio "alive" appena avviato
-    sys.stdout.write("alive\n")
-    sys.stdout.flush()
 
     contatore = 1
 
