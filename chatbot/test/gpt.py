@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.10
+#!/usr/bin/env python
 
 import os
 import dotenv
@@ -32,16 +32,16 @@ class Chatbot:
         self.chat_history = []
         self.openai_model = "gpt-4o"
         self.messages = []
-
+    
         self.load_topics()
         self.load_points_of_interest()
         docs = self.get_documents()
         self.vectorStore = self.create_db(docs)
         self.chain = self.create_chain(self.vectorStore)
-
-        while True:
+        ok = True
+        while ok:
             # Read a message from stdin
-            messaggio = sys.stdin.readline()
+            messaggio = "Ciao!\n" #sys.stdin.readline()
             if not messaggio:
                 break
 
@@ -58,7 +58,8 @@ class Chatbot:
 
             # Print and flush the response
             print(resp)  # Debug logging
-            sys.stdout.flush()
+            #sys.stdout.flush()
+            ok = False
 
     def load_topics(self):
         with open(os.path.join(self.DIRECTORY_PATH, self.TOPICS_FILE)) as f:
@@ -175,6 +176,7 @@ class Chatbot:
         resp = response['answer']
         self.chat_history.append(HumanMessage(content=message))
         self.chat_history.append(AIMessage(content=resp))
+
         return resp
 
 def main():

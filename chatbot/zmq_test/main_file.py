@@ -7,6 +7,10 @@ import speech_recognition as sr
 import rospy
 from std_msgs.msg import String
 import zmq
+import subprocess
+import signal
+from gtts import gTTS
+
 
 class Switch:
     def __init__(self):
@@ -50,15 +54,48 @@ class Switch:
         response = self.socket_recv.recv()
         #response = self.read_from_file(self.gpt_output_file)
         rospy.loginfo("GPT Response: %s", response)
+        
+        #return response
         self.pub_resp.publish(response)
 
+        if response[0] == "!":
+            resp = response.split()
+            response = " ".join(resp[1:])
+
+        self.play_wav(response)
+        
+    
+    def play_wav(self, msg):
+        #self.socket_send_wav.send_string(msg)
+        print(f"Playing message: {msg}")
+        tts = gTTS(msg, lang='it')
+        print("Saving audio file...")
+        mp3name = "temp.mp3"
+        print(f"Saving mp3 file: {mp3name}")
+        tts.save(mp3name)
+        print("Converting mp3 to wav...")
+
+        res = subprocess.run(['ffmpeg', '-i', mp3name, '-f', 'alsa', 'default'], check=True)
+
+        print(f"Conversion result: {res}")
+
+
+        if res != 0:        
+            os.system(f"rm {mp3name}")
+            #os.system(f"rm {wavname}")
+            return "error"
+        
+        print("Playing audio file...")
+        os.system(f"aplay {mp3name}")
+
+
     def clear_chat(self, req):
-        rospy.loginfo("Clearing chat...")
+        #rospy.loginfo("Clearing chat...")
         #self.write_to_file(self.gpt_input_file, "clear")
         self.socket_send.send_string("clear")
         response = self.socket_recv.recv()
         #response = self.read_from_file(self.gpt_output_file)
-        rospy.loginfo("Cleared chat: %s", response)
+        #rospy.loginfo("Cleared chat: %s", response)
         self.pub_resp.publish(response)
 
     def listen_mic(self, req=None):
@@ -82,19 +119,61 @@ class Switch:
     def start_external_processes(self):
         """Start the external Python scripts."""
         try:
+
+            port_send_gpt = "5558"
+            port_recv_gpt = "5557"
+
+            # port_send_wav = "5556"
+            # port_recv_wav = "5555"
+
+
+
+            # res = None
+            # res = subprocess.check_output(['lsof', '-t', '-i', ':'+port_send_gpt], text=True)
+
+            # if res == None:
+            #     print("[DELETE]: deleting process " + str(res))
+            #     os.kill(int(res), signal.SIGTERM)
+            #     res = None
+
+            # res = subprocess.check_output(['lsof', '-t', '-i', ':'+port_recv_gpt], text=True)
+            # if res == None:
+            #     print("[DELETE]: deleting process " + str(res))
+            #     os.kill(int(res), signal.SIGTERM)
+            #     res = None
+
             # Starting gpt.py
-            os.system('python3.10 gpt_file.py > gpt.log 2>&1 &')
+            #os.system('python3.10 gpt_file.py > gpt.log 2>&1 &')
+            subprocess.Popen(['python3.10', 'gpt_file.py'])
+            print("[INFO]: Waiting for GPT server to start...")
+            time.sleep(1)
             print("[INFO]: Started GPT server (gpt.py)")
+            
+            # subprocess.Popen(['python3.10', 'play_wav_file.py'])
+            # print("[INFO]: Waiting for Play WAV server to start...")
+            # time.sleep(1)
+            # print("[INFO]: Started Play WAV server (play_wav.py)")
+
+            
 
             context = zmq.Context()
-
             # Socket to send messages
             self.socket_send = context.socket(zmq.PAIR)
-            self.socket_send.connect("tcp://0.0.0.0:5558")
+            self.socket_send.connect("tcp://0.0.0.0:"+port_send_gpt)
 
             # Socket to receive messages
             self.socket_recv = context.socket(zmq.PAIR)
-            self.socket_recv.bind("tcp://0.0.0.0:5557")
+            self.socket_recv.bind("tcp://0.0.0.0:"+port_recv_gpt)
+
+            # # Socket to send messages
+            # self.socket_send_wav = context.socket(zmq.PAIR)
+            # self.socket_send_wav.connect("tcp://0.0.0.0:"+port_send_wav)
+
+            # # Socket to receive messages
+            # self.socket_recv_wav = context.socket(zmq.PAIR)
+            # self.socket_recv_wav.bind("tcp://0.0.0.0:"+port_recv_wav)
+                                      
+                                         
 
             # # Starting play_wav.py
             #os.system('python3.10 play_wav_file.py > play_wav.log 2>&1 &')
@@ -109,14 +188,20 @@ class Switch:
             cmd = raw_input("Enter cmd: ")  # Use raw_input for Python 2.7
             if cmd == "gpt":
                 val = raw_input("Enter val: ")
-                self.write_to_file(self.gpt_input_file, val)
-                response = self.read_from_file(self.gpt_output_file)
+                response = self.gpt_callback(val)
+                # self.write_to_file(self.gpt_input_file, val)
+                # response = self.read_from_file(self.gpt_output_file)
                 print("[INFO]: GPT Response: " + response)
+                if response[0] == "!":
+                    resp = response.split()
+                    response = " ".join(resp[1:])
+
+                self.play_wav(response)
             elif cmd == "mic":
                 response = self.listen_mic()
                 print("[INFO]: Mic Response: " + response)
             elif cmd == "clear":
-                self.write_to_file(self.gpt_input_file, "clear")
+                #self.write_to_file(self.gpt_input_file, "clear")
                 print("Clearing chat...")
             elif cmd == "exit":
                 print("Exiting...")
@@ -127,52 +212,6 @@ class Switch:
                 sys.stdout.flush()
             continue
 
-    def write_to_file(self, file_path, message):
-        with open(file_path, 'w') as f:
-            f.write(message)
-            f.flush()
-
-    def read_from_mic_file(self, file_path):
-        while not os.path.exists(file_path):
-            time.sleep(0.1)
-
-        print("[INFO]: Reading from file: " + file_path)
-        with open(file_path, 'r') as f:
-            response = f.read().strip()
-            print(response)
-            if response == "Invalid command":
-                self.close_files()
-                sys.exit(1)
-            response = f.read().strip()
-            print(response)
-            response = f.read().strip()
-            print(response)
-            f.flush()
-
-
-
-        os.remove(file_path)
-        return response
-
-    def read_from_file(self, file_path):
-        while not os.path.exists(file_path):
-            time.sleep(0.1)
-
-        print("[INFO]: Reading from file: " + file_path)
-        with open(file_path, 'r') as f:
-            response = f.read().strip()
-            f.flush()
-        os.remove(file_path)  # Clean up the file after reading
-        return response
-
-    def close_files(self):
-        """Close and clean up files if necessary."""
-        for file_path in [self.gpt_input_file, self.gpt_output_file,
-                          self.mic_input_file, self.mic_output_file,
-                          self.wav_input_file, self.wav_output_file, "prova.txt"]:
-            if os.path.exists(file_path):
-                os.remove(file_path)
-        print("[INFO]: Closed and cleaned up files")
 
 def main():
     # Initialize the ROS node
