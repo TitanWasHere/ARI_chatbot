@@ -18,5 +18,9 @@
     "goto" : {
         "description": "Indicazioni per raggiungere un punto di interesse e andare in direzione di tale",
         "keywords": [ "vai", "portami", "andare"]
+    },
+    "wired" : {
+        "description": "Informazioni riguardanti il Wired festival",
+        "keywords": ["wired", "dove siamo", "oggi"]
     }
 }

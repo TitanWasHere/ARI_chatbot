@@ -14,5 +14,9 @@
     "addio": {
         "fileName": ["addio"],
         "text_if_error": "Autodistruzione fra 3... 2.. 1... Scherzo! A presto!"
+    },
+    "wired":{
+        "fileName": ["wired1", "wired2", "wired3"],
+        "text_if_error": "Siamo al wired festival di Rovereto, in Trentino, un posto pieno di innovazione e tecnologia, proprio come me!"
     }
 }

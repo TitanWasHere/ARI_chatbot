@@ -14,14 +14,19 @@ from gtts import gTTS
 
 class Switch:
     def __init__(self):
+
+        self.conversation_modality = None # None: no previous conversation, "text": text conversation, "voice": voice conversation
         # Initialize ROS subscribers and publishers
-        self.sub_message = rospy.Subscriber("/process_gpt", String, self.gpt_callback)
+        self.sub_message = rospy.Subscriber("/process_gpt", String, self.gpt_callback_wrapper)
         self.sub_clear = rospy.Subscriber("/clear_chat", String, self.clear_chat)
         self.sub_mic = rospy.Subscriber("/microphone", String, self.listen_mic)
-        
+        self.sub_mic_full = rospy.Subscriber("/mic_full", String, self.listen_always)
+
+
         self.pub_recognizing = rospy.Publisher("/mic_recognizing", String, queue_size=10)
         self.pub_mic = rospy.Publisher("/mic_response", String, queue_size=10)
-        self.pub_resp = rospy.Publisher("/chatbot_response", String, queue_size=10)    
+        self.pub_resp = rospy.Publisher("/chatbot_response", String, queue_size=10) 
+        self.pub_mic_full = rospy.Publisher("/mic_full_response", String, queue_size=10) 
         # Define file paths for communication
         self.gpt_input_file = 'gpt_input.txt'
         self.gpt_output_file = 'gpt_output.txt'
@@ -46,6 +51,45 @@ class Switch:
 
         #self.start_command_loop()
 
+    def listen_always(self, req):
+        if self.conversation_modality != "voice":
+            self.conversation_modality = "voice"
+            self.clear_chat(None)
+        
+        with self.mic as source:
+            self.r.adjust_for_ambient_noise(source)
+            #print("Listening...")
+            self.pub_mic_full.publish("Listening")
+            audio = self.r.listen(source)
+            #print("Recognizing...")
+            self.pub_mic_full.publish("Recognizing")
+            try:
+                question = self.r.recognize_google(audio, language="it-IT")
+                self.socket_send.send_string(question)
+                response = self.socket_recv.recv()
+
+                if response[0] == "!":
+                    resp = response.split()
+                    response = " ".join(resp[1:])
+
+                self.play_wav(response)
+
+                self.pub_mic_full.publish("Recognized")
+
+                return question
+            except sr.UnknownValueError:
+                return "Could not understand audio"
+            except sr.RequestError as e:
+                return "Could not request results; " + str(e)
+
+    def gpt_callback_wrapper(self, req):
+        if self.conversation_modality != "text":
+            self.conversation_modality = "text"
+            self.clear_chat(None)
+
+        self.gpt_callback(req)
+            
+
     def gpt_callback(self, req):
         rospy.loginfo("Received request: %s", req.data)
         #self.write_to_file(self.gpt_input_file, req.data)
@@ -65,33 +109,29 @@ class Switch:
         self.play_wav(response)
         
     
+    
     def play_wav(self, msg):
         #self.socket_send_wav.send_string(msg)
-        print("Playing message: {msg}".format(msg=msg))
+        print(f"Playing message: {msg}")
         tts = gTTS(msg, lang='it')
         print("Saving audio file...")
         mp3name = "temp.mp3"
-        wavname = "temp.wav" # AGGIUNTO
-        print("Saving mp3 file: {mp3name}".format(mp3name=mp3name))
+        print(f"Saving mp3 file: {mp3name}")
         tts.save(mp3name)
         print("Converting mp3 to wav...")
 
-        res = subprocess.call(['ffmpeg', '-i', mp3name, wavname], shell=True)
+        res = subprocess.run(['ffmpeg', '-i', mp3name, '-f', 'alsa', 'default'], check=True)
 
-        print("Conversion result: {res}".format(res=res))
+        print(f"Conversion result: {res}")
 
-        if res and res != 0:        
-            os.system("rm {mp3name}".format(mp3name=mp3name))
+
+        if res != 0:        
+            os.system(f"rm {mp3name}")
             #os.system(f"rm {wavname}")
             return "error"
         
         print("Playing audio file...")
-        os.system("aplay {mp3name}".format(mp3name=wavname))
-
-        os.system("rm {mp3name}".format(mp3name=mp3name))
-        os.system("rm {mp3name}".format(mp3name=wavname))
-        return "success"
-
+        os.system(f"aplay {mp3name}")
 
 
     def clear_chat(self, req):
@@ -104,6 +144,10 @@ class Switch:
         self.pub_resp.publish(response)
 
     def listen_mic(self, req=None):
+        if self.conversation_modality != "text":
+            self.conversation_modality = "text"
+            self.clear_chat(None)
+
         with self.mic as source:
             self.r.adjust_for_ambient_noise(source)
             #print("Listening...")
